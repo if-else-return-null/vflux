@@ -1,2 +1,2 @@
 # vflux
-Video transition creator 
+Video transition generator 
