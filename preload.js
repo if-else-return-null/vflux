@@ -39,19 +39,8 @@ window.capi.getVideoSources = function () {
                 sourceid = source.id
             }
         }
-        navigator.mediaDevices.enumerateDevices().then((adevices) => {
-            console.log("device_web_audio", adevices);
-            //devices = devices.filter((d) => d.kind === 'audioinput');
-            for (let device of adevices) {
-                console.log(device.kind, device.deviceId);
-                //console.log(device);
-                if (device.kind === "audiooutput") {
-                    //window.capi.setupRecorder(source.id)
-                    deviceid = device.deviceId
-                }
-            }
-            window.capi.setupRecorder(sourceid,deviceid)
-        });
+        window.capi.setupRecorder(sourceid)
+
     })
 }
 
@@ -59,8 +48,8 @@ window.capi.mediaRecorder; // MediaRecorder instance to capture footage
 window.capi.recordedChunks = [];
 
 
-window.capi.setupRecorder = async function (sourceid, deviceid) {
-    console.log("setupRecorder",sourceid, deviceid);
+window.capi.setupRecorder = async function (sourceid) {
+    console.log("setupRecorder",sourceid);
     let constraints = {
         audio: false,
         video: {
@@ -72,52 +61,24 @@ window.capi.setupRecorder = async function (sourceid, deviceid) {
     }
 
     let stream = await navigator.mediaDevices.getUserMedia(constraints);
-    // get the audio
-    console.log("starting audio context");
-    navigator.mediaDevices.getUserMedia({audio: { deviceId:deviceid } , video: false}).then(function(mediaStream){
-        console.log(" starting audio context 2",mediaStream.getTracks());
-      var audioTracks = mediaStream.getAudioTracks();
-      console.log("audioTracks", audioTracks);
 
-      // mix audio tracks
-      if(audioTracks.length > 0){
-        var mixAudioTrack = mixTracks(audioTracks);
-        stream.addTrack(mixAudioTrack);
-      }
+    // Create the Media Recorder
+    const options = { mimeType: 'video/webm; codecs=vp9' };
+    window.capi.mediaRecorder = new MediaRecorder(stream, options);
 
-      //stream.addTrack(audioTrack);
-      console.log("here");
-      // Create the Media Recorder
-      const options = { mimeType: 'video/webm; codecs=vp9' };
-      window.capi.mediaRecorder = new MediaRecorder(stream, options);
+    // Register Event Handlers
+    window.capi.mediaRecorder.ondataavailable = window.capi.handleDataAvailable;
+    window.capi.mediaRecorder.onstop = window.capi.handleStop;
 
-      // Register Event Handlers
-      window.capi.mediaRecorder.ondataavailable = window.capi.handleDataAvailable;
-      window.capi.mediaRecorder.onstop = window.capi.handleStop;
-
-      //window.capi.mediaRecorder.start();
-      console.log("recorder initialization complete ");
-
-
-    }).catch(function(err) {
-      //console.log("handle stream error");
-    })
+    //window.capi.mediaRecorder.start();
+    console.log("recorder initialization complete ");
 
 
 
 
 
 
-}
 
-function mixTracks(tracks) {
-  var ac = new AudioContext();
-  var dest = ac.createMediaStreamDestination();
-  for(var i=0;i<tracks.length;i++) {
-    const source = ac.createMediaStreamSource(new MediaStream([tracks[i]]));
-    source.connect(dest);
-  }
-  return dest.stream.getTracks()[0];
 }
 
 
@@ -148,64 +109,4 @@ window.capi.handleStop = async function (e) {
      window.capi.recordedChunks = [];
 
  })
-}
-
-//console.log(navigator);
-
-
-
-function startRecord() {
-    electron.desktopCapturer.getSources({types: ['window', 'screen']}, (error, sources) => {
-      if (error) throw error
-      for (let i = 0; i < sources.length; ++i) {
-        if (sources[i].name === "foo") {
-          navigator.mediaDevices.getUserMedia({
-            audio: false,
-            video: {
-              mandatory: {
-                chromeMediaSource: 'desktop',
-                chromeMediaSourceId: sources[i].id,
-                minWidth: 1280,
-                maxWidth: 1280,
-                minHeight: 720,
-                maxHeight: 720
-              }
-            }
-          })
-            .then((stream) => handleStream(stream))
-            .catch((e) => handleError(e))
-          return
-        }
-      }
-    });
-}
-
-function handleStream(stream) {
-    navigator.mediaDevices.getUserMedia({audio: true, video: false}).then(function(mediaStream){
-      var audioTracks = mediaStream.getAudioTracks();
-      //add video and audio sound
-      var medias = $("audio,video");
-      for (var i = 0; i < medias.length; i++) {
-        var tmpStream = medias[i].captureStream();  // mainWindow = new BrowserWindow({webPreferences: {experimentalFeatures: true} })
-        if(tmpStream) {
-          var tmpTrack = tmpStream.getAudioTracks()[0];
-          audioTracks.push(tmpTrack);
-        }
-      }
-
-      // mix audio tracks
-      if(audioTracks.length > 0){
-        var mixAudioTrack = mixTracks(audioTracks);
-        stream.addTrack(mixAudioTrack);
-      }
-
-      stream.addTrack(audioTrack);
-      //recorder = new MediaRecorder(stream);
-      recorder.ondataavailable = function(event) {
-        // deal with your stream
-      };
-      recorder.start(1000);
-    }).catch(function(err) {
-      //console.log("handle stream error");
-    })
 }

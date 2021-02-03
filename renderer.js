@@ -1,10 +1,22 @@
-// This file is required by the index.html file and will
-// be executed in the renderer process for that window.
-// No Node.js APIs are available in this process because
-// `nodeIntegration` is turned off. Use `preload.js` to
-// selectively enable features needed in the rendering
-// process.
 
+let BYID = function (id){ return document.getElementById(id) }
+let cloneObj = function(obj){ return JSON.parse(JSON.stringify(obj))}
+function generateUUIDv4() {
+  return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+    (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+  );
+}
+
+
+BYID("first_video").addEventListener('change', (event) => {
+    console.log( "First video path", BYID("first_video").files[0].path );
+})
+BYID("second_video").addEventListener('change', (event) => {
+    console.log( "Second video path", BYID("second_video").files[0].path );
+})
+
+
+//document.getElementById("myFile").files[0].path
 
 setTimeout(function(){
     console.log("recorder initialization started ");
