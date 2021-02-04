@@ -8,9 +8,16 @@
 const ipc = require('electron').ipcRenderer;
 const {desktopCapturer} = require('electron')
 const fs = require("fs")
+const { fork , spawn  } = require('child_process');
 
-console.log("pre-load : " , "test");
-
+//-sseof -3 -i inputVideo -update 1 -q:v 1 last.jpg
+//ffmpeg -i test.mp4 -vframes 1 -vf "scale=360:-1" small_thumnail.png
+let cmd = {ffprobe:"ffprobe", ffplay:"ffplay", ffmpeg:"ffmpeg"}
+cmd_options = {
+    last_frame:["-y", "-sseof", "-1", "-i", "inputVideo", "-update", "1", "-q:v", "1", "outputFile"],
+    first_frame:["-y", "-i", "inputVideo", "-vframes", "1", "outputFile"],
+    ffprobe_1:["-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", "inputFile"]
+}
 window.capi = {}
 
 //console.log(window);
@@ -109,4 +116,34 @@ window.capi.handleStop = async function (e) {
      window.capi.recordedChunks = [];
 
  })
+}
+
+// gety the last frame from a video file
+//first_frame:["-y", "-i", "inputVideo", "-vframes", "1", "outputFile"],
+window.capi.getLastFrame = function(path, video_index) {
+    BYID(video_index + "_video_img").src = ""
+    let options
+    if (video_index === "first"){ //last frame
+        options = cloneObj(cmd_options.last_frame)
+        options[4] = path
+        options[9] =  video_index + "_video_img.jpg"
+    } else { //first frame
+        options = cloneObj(cmd_options.first_frame)
+        options[2] = path
+        options[5] =  video_index + "_video_img.jpg"
+    }
+
+    let lastspawn = spawn(cmd.ffmpeg, options)
+   lastspawn.stdout.on('data', (data) => {
+       console.log("stdout",data.toString());
+   });
+
+   lastspawn.stderr.on('data', (data) => {
+       console.log("stderr",data.toString());
+   });
+
+   lastspawn.on('exit', (code) => {
+     console.log(`last_frame_spawn exited with code ${code}`);
+     BYID(video_index + "_video_img").src =  video_index + "_video_img.jpg"
+   });
 }

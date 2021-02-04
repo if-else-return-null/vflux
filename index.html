@@ -4,15 +4,24 @@
     <meta charset="UTF-8">
 
     <title>vflux_render</title>
+    <style media="screen">
+        #controls img {width:50%;}
+    </style>
   </head>
   <body>
-    <h1>Options</h1>
-    First Video <input type="file" id="first_video" value=""> <br>
-    Second Video <input type="file" id="second_video" value=""><br>
+      <div id="controls">
+          <h1>Options</h1>
+          First Video <input type="file" id="first_video" value=""> <br>
+          <img src="" id="first_video_img" alt="">
+          Second Video <input type="file" id="second_video" value=""><br>
+          <img src="" id="second_video_img" alt="">
 
+          <button type="button" onclick="window.capi.mediaRecorder.start()">Start</button>
+          <button type="button" onclick="window.capi.mediaRecorder.stop()">Stop</button>
+      </div>
+      <div id="render_area">
 
-    <button type="button" onclick="window.capi.mediaRecorder.start()">Start</button>
-    <button type="button" onclick="window.capi.mediaRecorder.stop()">Stop</button>
+      </div>
 
     <!-- You can also require other files to run in this process -->
     <script src="./renderer.js"></script>

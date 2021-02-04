@@ -10,9 +10,11 @@ function generateUUIDv4() {
 
 BYID("first_video").addEventListener('change', (event) => {
     console.log( "First video path", BYID("first_video").files[0].path );
+    window.capi.getLastFrame(BYID("first_video").files[0].path, "first")
 })
 BYID("second_video").addEventListener('change', (event) => {
     console.log( "Second video path", BYID("second_video").files[0].path );
+    window.capi.getLastFrame(BYID("second_video").files[0].path, "second")
 })
 
 
