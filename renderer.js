@@ -7,22 +7,28 @@ function generateUUIDv4() {
   );
 }
 
+let STATE = vflux.state
+console.log(vflux);
 
-BYID("first_video").addEventListener('change', (event) => {
-    console.log( "First video path", BYID("first_video").files[0].path );
-    window.capi.getLastFrame(BYID("first_video").files[0].path, "first")
+BYID("video_0").addEventListener('change', (event) => {
+    let path = BYID("video_0").files[0].path
+    //console.log( "First video path", BYID("first_video").files[0].path );
+    vflux.getVideoFrame(path, 0)
+    vflux.getVideoProbeInfo(path, 0)
 })
-BYID("second_video").addEventListener('change', (event) => {
-    console.log( "Second video path", BYID("second_video").files[0].path );
-    window.capi.getLastFrame(BYID("second_video").files[0].path, "second")
+BYID("video_1").addEventListener('change', (event) => {
+    let path = BYID("video_1").files[0].path
+    //console.log( "Second video path", BYID("second_video").files[0].path );
+    vflux.getVideoFrame(path, 1)
+    vflux.getVideoProbeInfo(path, 1)
 })
 
 
 //document.getElementById("myFile").files[0].path
 
 setTimeout(function(){
-    console.log("recorder initialization started ");
-    window.capi.getVideoSources();
+    //console.log("recorder initialization started ");
+    //vflux.getVideoSources();
 },1000)
 
 /*
@@ -34,5 +40,7 @@ setTimeout(function(){
 
 function handleFromMainProcess(data){
     console.log("from_mainProcess", data);
-
+    if (data.type === "start_job" ) {
+        vflux.initJobRecorder(data.jobdata)
+    }
 }

@@ -18,11 +18,21 @@ cmd_options = {
     first_frame:["-y", "-i", "inputVideo", "-vframes", "1", "outputFile"],
     ffprobe_1:["-v", "quiet", "-print_format", "json", "-show_format", "-show_streams", "inputFile"]
 }
-window.capi = {}
+
+
+let mimes = {
+    mp4:`video/x-matroska; codecs="h264"`,
+    webm:'video/webm; codecs="avc1.64003d"',
+    ogg:'video/webm; codecs=vp9'
+}
+window.vflux = {}
+window.vflux.state = {}
+window.vflux.state.clip0 = { ffprobe:null, path:null }
+window.vflux.state.clip1 = { ffprobe:null, path:null }
 
 //console.log(window);
 // ipc to the main process
-window.capi.ipcSend = function (channel,data) {
+window.vflux.ipcSend = function (channel,data) {
     ipc.send(channel, data)
 }
 
@@ -31,57 +41,98 @@ ipc.on('from_mainProcess', (event, data) => {
     handleFromMainProcess(data)
 })
 
+window.vflux.initJobRecorder = function (data) {
+
+    // change the window size to match job options
+
+    // setup the recorer with job options
+    window.vflux.getVideoSources(data)
+}
+
 
 // Get the available video sources
-window.capi.getVideoSources = function () {
+window.vflux.getVideoSources = function (data) {
     let sourceid // video
     let deviceid // audio
     desktopCapturer.getSources({ types: ['window', 'screen'] }).then(async sources => {
-        console.log(sources);
+        //console.log(sources);
         for (let source of sources) {
-            console.log(source.name);
+            //console.log(source.name);
             //console.log(source);
             if (source.name === "vflux_render") {
-                //window.capi.setupRecorder(source.id)
+                console.log(`\nFound ${source.name} window`);
                 sourceid = source.id
             }
         }
-        window.capi.setupRecorder(sourceid)
+        data.sourceid = sourceid
+        window.vflux.setupRecorder(data)
 
     })
 }
 
-window.capi.mediaRecorder; // MediaRecorder instance to capture footage
-window.capi.recordedChunks = [];
 
 
-window.capi.setupRecorder = async function (sourceid) {
-    console.log("setupRecorder",sourceid);
+
+window.vflux.setupRecorder = async function (data) {
+    window.vflux.mediaRecorder = null
+    window.vflux.recordedChunks = [];
+
+    console.log(`\nsetupRecorder" , ${data.sourceid}`);
     let constraints = {
         audio: false,
         video: {
             mandatory: {
                 chromeMediaSource: 'desktop',
-                chromeMediaSourceId: sourceid
+                chromeMediaSourceId: data.sourceid
             }
         }
     }
 
     let stream = await navigator.mediaDevices.getUserMedia(constraints);
 
-    // Create the Media Recorder
-    const options = { mimeType: 'video/webm; codecs=vp9' };
-    window.capi.mediaRecorder = new MediaRecorder(stream, options);
+    // Create the Media Recorder mimes
+    const options = { mimeType:  mimes[data.out_ops.container] };
+    window.vflux.mediaRecorder = new MediaRecorder(stream, options);
+
+    // define the handler function
+
+
+    // Captures all recorded chunks
+    window.vflux.handleDataAvailable = function (e) {
+      //console.log('video data available');
+      window.vflux.recordedChunks.push(e.data);
+    }
+
+    // Saves the video file on stop
+    window.vflux.handleStop = async function (e) {
+      const blob = new Blob(window.vflux.recordedChunks, {
+
+        type: mimes[data.out_ops.container]
+      });
+
+      const buffer = Buffer.from(await blob.arrayBuffer());
+
+
+      let filepath = `outvideo.${data.out_ops.container}`
+      //console.log(filepath);
+
+      fs.writeFile(filepath, buffer, function () {
+         console.log(`\nvideo saved successfully!`);
+         //window.vflux.recordedChunks = [];
+
+     })
+    }
+
 
     // Register Event Handlers
-    window.capi.mediaRecorder.ondataavailable = window.capi.handleDataAvailable;
-    window.capi.mediaRecorder.onstop = window.capi.handleStop;
+    window.vflux.mediaRecorder.ondataavailable = window.vflux.handleDataAvailable;
+    window.vflux.mediaRecorder.onstop = window.vflux.handleStop;
 
-    //window.capi.mediaRecorder.start();
-    console.log("recorder initialization complete ");
+    //window.vflux.mediaRecorder.start();
+    console.log(`\nrecorder initialization complete `);
+    //window.vflux.ipcSend("from_vflux", {type:"ready_state", value:true})
 
-
-
+    window.vflux.processJob(data)
 
 
 
@@ -89,61 +140,56 @@ window.capi.setupRecorder = async function (sourceid) {
 }
 
 
-
-// Captures all recorded chunks
-window.capi.handleDataAvailable = function (e) {
-  console.log('video data available');
-  window.capi.recordedChunks.push(e.data);
+window.vflux.processJob = function (data) {
+    console.log("\nprocessing job ", data);
 }
 
-// Saves the video file on stop
-window.capi.handleStop = async function (e) {
-  const blob = new Blob(window.capi.recordedChunks, {
-    //type: 'video/webm; codecs=vp9'
-    //type: 'video/mp4; codecs=h264'
-    type: 'video/ogg; codecs=h264'
-  });
 
-  const buffer = Buffer.from(await blob.arrayBuffer());
 
-  //let filepath = "outvideo.webm"
-  //let filepath = "outvideo.mp4"
-  let filepath = "outvideo.ogg"
-  console.log(filepath);
+window.vflux.getVideoProbeInfo = function(path,index) {
+    let options = cloneObj(cmd_options.ffprobe_1)
+    options[6] = path
+    //console.log(options);
+    let output = ""
+    let probespawn = spawn(cmd.ffprobe, options)
+    probespawn.stdout.on('data', (data) => { output += data });
+    probespawn.stderr.on('data', (data) => { console.log("stderr",data.toString());});
+    probespawn.on('exit', (code) => {
+        window.vflux.state[`clip${index}`].ffprobe = JSON.parse(output)
+        console.log("\nFFPROBE: ", code , window.vflux.state[`clip${index}`].ffprobe)
+    });
 
-  fs.writeFile(filepath, buffer, function () {
-     console.log('video saved successfully!');
-     window.capi.recordedChunks = [];
-
- })
 }
+
 
 // gety the last frame from a video file
 //first_frame:["-y", "-i", "inputVideo", "-vframes", "1", "outputFile"],
-window.capi.getLastFrame = function(path, video_index) {
-    BYID(video_index + "_video_img").src = ""
+window.vflux.getVideoFrame = function(path, index) {
+    BYID(`video_img_${index}`).src = ""
+    window.vflux.state[`clip${index}`].path = path
     let options
-    if (video_index === "first"){ //last frame
+    if (index === 0){ //last frame
         options = cloneObj(cmd_options.last_frame)
         options[4] = path
-        options[9] =  video_index + "_video_img.jpg"
+        options[9] =  `video_img_${index}.jpg`
     } else { //first frame
         options = cloneObj(cmd_options.first_frame)
         options[2] = path
-        options[5] =  video_index + "_video_img.jpg"
+        options[5] =  `video_img_${index}.jpg`
     }
-
+    let spawnlog = {out:[], err:[], exit:null}
     let lastspawn = spawn(cmd.ffmpeg, options)
    lastspawn.stdout.on('data', (data) => {
-       console.log("stdout",data.toString());
+       spawnlog.out.push(data.toString())
    });
 
    lastspawn.stderr.on('data', (data) => {
-       console.log("stderr",data.toString());
+       spawnlog.err.push(data.toString())
    });
 
    lastspawn.on('exit', (code) => {
-     console.log(`last_frame_spawn exited with code ${code}`);
-     BYID(video_index + "_video_img").src =  video_index + "_video_img.jpg"
+       spawnlog.exit = code
+       console.log(`\ngetVideoFrame ${index} \n ${path} \n`, spawnlog );
+       BYID(`video_img_${index}`).src =  `video_img_${index}.jpg`
    });
 }
