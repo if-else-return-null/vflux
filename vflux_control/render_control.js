@@ -1,5 +1,4 @@
-// All of the Node.js APIs are available in the preload process.
-// It has the same sandbox as a Chrome extension.
+
 
 //window.addEventListener('DOMContentLoaded', () => {
 
@@ -27,6 +26,7 @@ let mimes = {
 }
 window.vflux = {}
 window.vflux.state = {}
+window.vflux.FluxTypes = ["none","fade-in","fade-out","slide-up","slide-down"]
 window.vflux.state.clip0 = { ffprobe:null, path:null }
 window.vflux.state.clip1 = { ffprobe:null, path:null }
 

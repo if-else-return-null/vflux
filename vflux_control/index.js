@@ -13,15 +13,23 @@ console.log(vflux);
 BYID("video_0").addEventListener('change', (event) => {
     let path = BYID("video_0").files[0].path
     //console.log( "First video path", BYID("first_video").files[0].path );
-    vflux.getVideoFrame(path, 0)
-    vflux.getVideoProbeInfo(path, 0)
+    //vflux.getVideoFrame(path, 0)
+    //vflux.getVideoProbeInfo(path, 0)
 })
 BYID("video_1").addEventListener('change', (event) => {
     let path = BYID("video_1").files[0].path
     //console.log( "Second video path", BYID("second_video").files[0].path );
-    vflux.getVideoFrame(path, 1)
-    vflux.getVideoProbeInfo(path, 1)
+    //vflux.getVideoFrame(path, 1)
+    //vflux.getVideoProbeInfo(path, 1)
 })
+
+function parseFluxSelector () {
+    let str = ""
+    vflux.FluxTypes.forEach((item, i) => {
+      str += `<option value="${item}">${item}</option>`
+    });
+    BYID("sa_flux_type_selector").innerHTML = str
+}
 
 
 //document.getElementById("myFile").files[0].path
