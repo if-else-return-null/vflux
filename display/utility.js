@@ -11,16 +11,16 @@ let STATE = vflux.state
 console.log(vflux);
 
 
-function handleFromMainProcess(data){
+function handleFromMain(data){
     console.log("from_mainProcess", data);
     if (data.type === "ready_state" ) {
 
     }
 }
 
-function handleFromRenderControl(data){
+function handleFromControl(data){
     console.log("from_render_control", data);
     if (data.type === "prepare_flux" ) {
-        
+
     }
 }

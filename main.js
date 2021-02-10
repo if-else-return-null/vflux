@@ -2,8 +2,8 @@
 const {app, BrowserWindow, ipcMain} = require('electron')
 const path = require('path')
 
-let vfluxRenderWindow = null
-let vfluxControlWindow = null
+let renderDisplayWindow = null
+let renderControlWindow = null
 let STATE = {}
 
 
@@ -11,36 +11,36 @@ let STATE = {}
 
 function createControlWindow () {
     // Create the browser window.
-    vfluxControlWindow = new BrowserWindow({
+    renderControlWindow = new BrowserWindow({
         width: 800,
         height: 600,
         webPreferences: {
-            preload: path.join(__dirname, 'vflux_control/render_control.js')
+            preload: path.join(__dirname, 'control/render_control.js')
         }
     })
 
     // and load the index.html of the app.
-    vfluxControlWindow.loadFile('vflux_control/index.html')
+    renderControlWindow.loadFile('vflux_control/index.html')
 
     // Open the DevTools.
-    vfluxControlWindow.webContents.openDevTools()
+    renderControlWindow.webContents.openDevTools()
 }
 
-function createRenderWindow () {
+function createDisplayWindow () {
     // Create the browser window.
-    vfluxRenderWindow = new BrowserWindow({
+    renderDisplayWindow = new BrowserWindow({
         width: 1600,
         height: 900,
         webPreferences: {
-            preload: path.join(__dirname, 'vflux_render/vflux_display.js')
+            preload: path.join(__dirname, 'display/render_display.js')
         }
     })
 
     // and load the index.html of the app.
-    vfluxRenderWindow.loadFile('vflux_render/index.html')
+    renderDisplayWindow.loadFile('vflux_render/index.html')
 
     // Open the DevTools.
-    vfluxRenderWindow.webContents.openDevTools()
+    renderDisplayWindow.webContents.openDevTools()
 }
 
 app.whenReady().then(() => {
@@ -60,12 +60,33 @@ VFLUX.jobs = []
 
 VFLUX.isWorking = false
 
-ipcMain.on('from_vflux', (event, data) => {
-    //console.log("vfluxControlWindow", data)
-    //if (data.type === "ready_state"){ VFLUX.handleReady(data) }
-    if (data.type ===  "job_complete"){ VFLUX.handleDone(data) }
+
+ipcMain.on('to_display_from_control', (event, data) => {
+    // this just passes data between windows
+    renderDisplayWindow.webContents.send("from_control",data)
+
 
 })
+
+ipcMain.on('to_main_from_control', (event, data) => {
+    //console.log("renderControlWindow", data)
+    if (data.type ===  "job_complete"){ VFLUX.handleDone(data) }
+})
+
+
+ipcMain.on('to_control_from_display', (event, data) => {
+    // this just passes data between windows
+    renderDisplayWindow.webContents.send("from_display",data)
+
+
+})
+
+ipcMain.on('to_main_from_display', (event, data) => {
+    console.log("to_main_from_display", data)
+
+})
+
+
 
 
 /*
@@ -95,7 +116,7 @@ VFLUX.doJob = function () {
         if(VFLUX.jobs.length !== 0){
             VFLUX.isWorking = true
             let job = VFLUX.jobs.shift()
-            vfluxControlWindow.webContents.send("from_mainProcess",{ type:"start_job", jobdata:job })
+            renderControlWindow.webContents.send("from_standalone_main",{ type:"start_job", jobdata:job })
         } else {
             console.log("doJob: vflux has no jobs left");
         }
